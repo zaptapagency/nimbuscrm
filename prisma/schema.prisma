@@ -1,0 +1,171 @@
+// NimbusCRM Prisma schema.
+// Default datasource is SQLite for zero-config local runs.
+// To use PostgreSQL: set provider = "postgresql" and point DATABASE_URL at your DB.
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// NOTE: These string columns model enums. SQLite does not support native Prisma
+// enums, so allowed values live in src/lib/enums.ts and are enforced by Zod.
+// Role: ADMIN | MANAGER | SALES_REP
+// LeadStatus: NEW | CONTACTED | QUALIFIED | UNQUALIFIED | CONVERTED
+// OpportunityStage: PROSPECTING | QUALIFICATION | PROPOSAL | NEGOTIATION | CLOSED_WON | CLOSED_LOST
+// ActivityType: TASK | CALL | MEETING | NOTE
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  name         String
+  passwordHash String
+  role         String   @default("SALES_REP")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // Ownership relations
+  ownedLeads         Lead[]          @relation("LeadOwner")
+  ownedAccounts      Account[]       @relation("AccountOwner")
+  ownedContacts      Contact[]       @relation("ContactOwner")
+  ownedOpportunities Opportunity[]   @relation("OpportunityOwner")
+  ownedActivities    Activity[]      @relation("ActivityOwner")
+
+  // Created-by relations
+  createdLeads         Lead[]        @relation("LeadCreatedBy")
+  createdAccounts      Account[]     @relation("AccountCreatedBy")
+  createdContacts      Contact[]     @relation("ContactCreatedBy")
+  createdOpportunities Opportunity[] @relation("OpportunityCreatedBy")
+  createdActivities    Activity[]    @relation("ActivityCreatedBy")
+}
+
+model Lead {
+  id        String     @id @default(cuid())
+  firstName String
+  lastName  String
+  company   String
+  email     String?
+  phone     String?
+  title     String?
+  status    String     @default("NEW")
+  source    String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  ownedById   String
+  ownedBy     User   @relation("LeadOwner", fields: [ownedById], references: [id])
+  createdById String
+  createdBy   User   @relation("LeadCreatedBy", fields: [createdById], references: [id])
+
+  // Set when lead is converted
+  convertedContactId     String?
+  convertedAccountId     String?
+  convertedOpportunityId String?
+
+  @@index([status])
+  @@index([ownedById])
+}
+
+model Account {
+  id          String   @id @default(cuid())
+  name        String
+  industry    String?
+  website     String?
+  phone       String?
+  billingCity String?
+  employees   Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  ownedById   String
+  ownedBy     User   @relation("AccountOwner", fields: [ownedById], references: [id])
+  createdById String
+  createdBy   User   @relation("AccountCreatedBy", fields: [createdById], references: [id])
+
+  contacts      Contact[]
+  opportunities Opportunity[]
+  activities    Activity[]
+
+  @@index([ownedById])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String?
+  phone     String?
+  title     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  ownedById   String
+  ownedBy     User   @relation("ContactOwner", fields: [ownedById], references: [id])
+  createdById String
+  createdBy   User   @relation("ContactCreatedBy", fields: [createdById], references: [id])
+
+  opportunities Opportunity[]
+  activities    Activity[]
+
+  @@index([accountId])
+  @@index([ownedById])
+}
+
+model Opportunity {
+  id          String           @id @default(cuid())
+  name        String
+  stage       String           @default("PROSPECTING")
+  amount      Float            @default(0)
+  probability Int              @default(10)
+  closeDate   DateTime
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  accountId String?
+  account   Account? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+  contactId String?
+  contact   Contact? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+
+  ownedById   String
+  ownedBy     User   @relation("OpportunityOwner", fields: [ownedById], references: [id])
+  createdById String
+  createdBy   User   @relation("OpportunityCreatedBy", fields: [createdById], references: [id])
+
+  activities Activity[]
+
+  @@index([stage])
+  @@index([ownedById])
+}
+
+model Activity {
+  id          String       @id @default(cuid())
+  type        String       @default("TASK")
+  subject     String
+  description String?
+  dueDate     DateTime?
+  completed   Boolean      @default(false)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Polymorphic-ish attachment via optional FKs
+  leadId        String?
+  contactId     String?
+  contact       Contact?     @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  accountId     String?
+  account       Account?     @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  opportunityId String?
+  opportunity   Opportunity? @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+
+  ownedById   String
+  ownedBy     User   @relation("ActivityOwner", fields: [ownedById], references: [id])
+  createdById String
+  createdBy   User   @relation("ActivityCreatedBy", fields: [createdById], references: [id])
+
+  @@index([ownedById])
+  @@index([completed])
+}
