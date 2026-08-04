@@ -6,9 +6,6 @@
   "deploy": {
     "restartPolicyMaxRetries": 5,
     "restartPolicyWindow": 600,
-    "healthcheckPath": "/api/health",
-    "healthcheckTimeout": 60,
-    "healthcheckIntervalMs": 5000,
     "numReplicas": 1
   }
 }
