@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { Providers } from "./providers";
-import { validateEnv } from "@/lib/env";
 
-// Validate environment at boot time
-validateEnv();
+// Note: Environment validation runs at server startup via Dockerfile CMD,
+// not during build time. This ensures validation happens in production
+// where environment variables are actually available.
 
 export const metadata: Metadata = {
   title: "NimbusCRM",

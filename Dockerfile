@@ -32,4 +32,4 @@ USER nextjs
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
+CMD ["sh", "-c", "{ test -z \"$DATABASE_URL\" && echo \"ERROR: DATABASE_URL not set\" && exit 1; } && { test -z \"$NEXTAUTH_SECRET\" && echo \"ERROR: NEXTAUTH_SECRET not set\" && exit 1; } && npx prisma migrate deploy && node server.js"]
