@@ -19,6 +19,9 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
+# Install OpenSSL for Prisma compatibility
+RUN apk add --no-cache openssl
+
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
