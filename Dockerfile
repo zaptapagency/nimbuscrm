@@ -1,12 +1,12 @@
 # NimbusCRM Dockerfile for Railway deployment
 # 3-stage build: deps → builder → runner
 
-FROM node:20-alpine AS deps
+FROM node:20-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev
 
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci
@@ -14,16 +14,13 @@ COPY . .
 RUN npx prisma generate
 RUN npm run build
 
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install OpenSSL 1.1 for Prisma compatibility (Alpine musl requirement)
-RUN apk add --no-cache openssl1.1
-
 # Create non-root user
-RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
+RUN groupadd -g 1001 nodejs && useradd -u 1001 -g nodejs nextjs
 
 # Copy built app from builder
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
