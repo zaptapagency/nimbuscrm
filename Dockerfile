@@ -19,8 +19,8 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Install OpenSSL for Prisma compatibility
-RUN apk add --no-cache openssl
+# Install OpenSSL 1.1 for Prisma compatibility (Alpine musl requirement)
+RUN apk add --no-cache openssl1.1
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
